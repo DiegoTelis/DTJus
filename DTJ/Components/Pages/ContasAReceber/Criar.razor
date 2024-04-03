@@ -1,0 +1,162 @@
+﻿@page "/contasar/salvar/{id:int?}"
+@using DTJ.Components.Compartilhado.Enums
+@rendermode InteractiveServer
+@inject ApplicationDbContext _context
+@inject NavigationManager nav
+
+<PageTitle>A Receber</PageTitle>
+<h1>Cadastrar Contas A Receber</h1>
+
+
+<EditForm Model="@Model" OnValidSubmit="Gravar"  OnInvalidSubmit="Gravar1" >
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row">
+        <div class="col-md-9 mb-3">
+            <label class="form-label"> Descrição</label>
+
+
+            <InputText @bind-Value="Model.Descricao" class="form-control" />
+            <ValidationMessage For="@(() => Model.Descricao)" />
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label">Tipo Recebimento</label>
+            <InputSelect @bind-Value="@Model.TipoRecebimento" class="form-control">
+                <option value="@RecebimentoEnum.Honorarios">@RecebimentoEnum.Honorarios</option>
+                <option value="@RecebimentoEnum.Sucumbencia">@RecebimentoEnum.Sucumbencia</option>
+                <option value="@RecebimentoEnum.Alvara">@RecebimentoEnum.Alvara</option>
+            </InputSelect>
+
+            <ValidationMessage For="@(() => Model.TipoRecebimento)" />
+        </div>
+        
+    </div>
+
+    <div class="row">
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Valor Base</label>
+            <InputNumber @bind-Value="Model.ValorBase" class="form-control" />
+            <ValidationMessage For="@(() => Model.ValorBase)" />
+        </div>
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Adicional</label>
+            <InputNumber @bind-Value="Model.Adicional" class="form-control" />
+            <ValidationMessage For="@(() => Model.Adicional)" />
+        </div>
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Desconto</label>
+            <InputNumber @bind-Value="Model.Desconto" class="form-control" />
+            <ValidationMessage For="@(() => Model.Desconto)" />
+        </div>
+        <div class="col-md-3 mb-3 card">
+            <label class="card-header-pills text-center">Total</label> 
+            <label class="card-text text-center " style="font-size: x-large;">@Model.Total.ToString("c")</label>
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label">Cliente</label>
+            <InputSelect @bind-Value="Model.PessoaId" class="form-control">
+                @foreach (var p in Pessoas)
+                {
+                    <option value="@p.Id">@p.Nome</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Lançamento</label>
+            <InputDate  @bind-Value="Model.DataLancamento" class="form-control" />
+            <ValidationMessage For="@(() => Model.DataLancamento)" />
+        </div>
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Vecimento</label>
+            <InputDate  @bind-Value="Model.DataVencimento" class="form-control" />
+            <ValidationMessage For="@(() => Model.DataVencimento)" />
+        </div>
+        <div class="col-md-2 mb-3">
+            @if (Model.ValorRecebido != 0)
+            {
+                <label class="form-label">Recebimento</label>
+                <InputDate  @bind-Value="Model.DataRecebimento" class="form-control" />
+                <ValidationMessage For="@(() => Model.DataRecebimento)" />
+           
+            }
+            else
+            {
+                <a>Data RECEBIMENTO etc etc Quando NULO</a>
+            }
+        </div>
+        <div class ="col-md-3 mb-3">
+            <label class="form-label">Valor Recebimento</label>
+            <InputNumber @bind-Value="Model.ValorRecebido" class="form-control"  />
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label">Tarefa Vinculada</label>
+            @* <InputSelect @bind-Value="Model.TarefaId" class="form-control" @onchange="TarefaSelecionada" @onselect="TarefaSelecionada" ValueChanged="@(() => TarefaSelecionada())" >
+                @foreach (var t in Tarefas)
+                {
+                    <option value="@t.Id">@t.Descricao</option>
+                }
+            </InputSelect> *@
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Observação</label>
+            <InputTextArea @bind-Value="Model.Observacao" class="form-control" rows="3"></InputTextArea>
+        </div>
+        
+    </div>
+  @*   <div class="col-md-3 mb-3 card">
+        <label class="form-label">Status</label>
+        <label class="text-center"> @Model.Status </label>
+    </div> *@
+
+
+    <button type="submit" class="btn btn-primary">Criar</button>
+    <a href="/contasar">Cancelar</a>
+
+</EditForm>
+
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private ContasAReceber Model { get; set; } = new();
+    public List<Tarefa> Tarefas { get; set; } = new();
+    public List<Pessoa> Pessoas{ get; set; } = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+            Model = await _context.Recebimentos.FirstOrDefaultAsync(x => x.Id == Id) ?? new();
+
+        Tarefas = await _context.Tarefas.AsTracking().Select(e => new Tarefa { Id = e.Id, Descricao = e.Descricao, PessoaId = e.PessoaId }).ToListAsync();
+        Pessoas = await _context.Pessoas.AsTracking().Select(e => new Pessoa { Id = e.Id, Nome = e.Nome }).ToListAsync();
+
+    }
+
+    private async Task Gravar()
+    {
+
+        if (Model.Id == 0)
+            await _context.Recebimentos.AddAsync(Model);
+        else
+            _context.Recebimentos.Update(Model);
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task Gravar1()
+    {
+
+    }
+    private void TarefaSelecionada()
+    {
+        Model.PessoaId = Tarefas.Where(p => p.PessoaId == Model.PessoaId).Select(p => p.Id).FirstOrDefault();
+    }
+
+}

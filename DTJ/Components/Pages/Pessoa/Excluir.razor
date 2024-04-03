@@ -1,0 +1,39 @@
+﻿@page "/clientes/excluir/{id:int}"
+
+@inject ApplicationDbContext _context
+@inject NavigationManager nav
+
+@rendermode InteractiveServer
+
+<PageTitle>Excluir Cadastro</PageTitle>
+<h3 class="text-center">Deseja realmente excluir: @Model.Nome ? </h3>
+
+<button class="btn btn-primary" @onclick="ExcluirCliente">Excluir</button>
+<a href="/clientes">Cancelar</a>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    public Pessoa Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model = await _context.Pessoas.FirstOrDefaultAsync(x => x.Id == Id);
+    }
+
+    private async Task ExcluirCliente()
+    {
+        try
+        {
+            _context.Pessoas.Remove(Model);
+            await _context.SaveChangesAsync();
+            nav.NavigateTo("/clientes");
+        }
+        catch{}
+
+
+    }
+
+
+
+}

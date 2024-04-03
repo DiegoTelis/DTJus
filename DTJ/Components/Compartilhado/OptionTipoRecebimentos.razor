@@ -1,0 +1,14 @@
+﻿@using DTJ.Components.Compartilhado.Enums
+
+<InputSelect @bind-Value="Recebimento" class="form-control">
+    <option value="@RecebimentoEnum.Honorarios">@RecebimentoEnum.Honorarios</option>
+    <option value="@RecebimentoEnum.Sucumbencia">@RecebimentoEnum.Sucumbencia</option>
+    <option value="@RecebimentoEnum.Alvara">@RecebimentoEnum.Alvara</option>
+</InputSelect>
+
+@code {
+    [EditorRequired]
+    [Parameter]
+    public RecebimentoEnum Recebimento { get; set; }
+
+}

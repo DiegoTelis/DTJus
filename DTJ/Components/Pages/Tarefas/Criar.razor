@@ -1,0 +1,89 @@
+﻿@page "/tarefas/criar"
+
+@rendermode InteractiveServer
+
+@inject ApplicationDbContext _context
+@inject NavigationManager nav
+
+
+<PageTitle>Criar Tarefa</PageTitle>
+
+<h1>Criar Tarefa</h1>
+
+<EditForm Model="@Model" OnValidSubmit="@SalvarTarefa" OnInvalidSubmit="@Errada">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row">
+        <div class="col-md-8 mb-3">
+            <label class="form-label">Descricao</label>
+            <InputText @bind-Value="Model.Descricao" class="form-control" />
+            <ValidationMessage For="@(() => Model.Descricao)" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Tipo</label>
+            <InputText @bind-Value="Model.Tipo" class="form-control" />
+            <ValidationMessage For="@(() => Model.Tipo)" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8 mb-3">
+            <label class="form-label">Cliente</label> 
+            <InputSelect @bind-Value="Model.PessoaId" class="form-control" >
+            @foreach(var p in Pessoas)
+            {
+                <option value="@p.Id" >@p.Nome</option>
+            }
+            </InputSelect>
+
+            <ValidationMessage For="@(() => Model.DataVencimento)" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Data Final do Prazo</label>
+            <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="Model.DataVencimento" class="form-control" />
+            <ValidationMessage For="@(() => Model.DataVencimento)" />
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Observação</label>
+            <InputTextArea @bind-Value="Model.Observacao"  class="form-control"  rows="3"></InputTextArea>
+        </div>
+    </div>
+
+
+    <button type="submit" class="btn btn-primary">Criar</button>
+    <a href="/tarefas">Cancelar</a>
+    
+</EditForm>
+
+
+
+@code {
+    public Tarefa Model { get; set; } = new();
+
+    public List<Pessoa> Pessoas{ get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Pessoas = await _context.Pessoas.AsNoTracking().OrderBy(x => x.Nome).ToListAsync();
+    }
+
+    private async Task SalvarTarefa()
+    {
+        try
+        {
+            await _context.Tarefas.AddAsync(Model);
+            await _context.SaveChangesAsync();
+            nav.NavigateTo("/tarefas");
+        }
+        catch{}
+
+
+    }
+
+    void Errada(){}
+
+}

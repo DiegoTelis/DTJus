@@ -1,0 +1,87 @@
+﻿@attribute [StreamRendering]
+
+<div>
+    <InputText @bind-Value="NomePesquisado" class="form-control" @onkeydown="FiltrarNome"></InputText>
+</div>
+
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <td>Cod</td>
+                <td>Nome</td>
+                <td>Telefone</td>
+                <td>CPF</td>
+                <td>Ações</td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in PessoaList)
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td>@p.Nome</td>
+                    <td>@p.Telefone</td>
+                    <td>@p.CPF</td>
+                    <td>
+                        <a class="btn btn-info" href="/clientes/editar/@p.Id">Editar</a>
+                        <a class="btn btn-info" href="/clientes/excluir/@p.Id">Excluir</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<nav aria-label="Navegação de página exemplo">
+    <ul class="pagination justify-content-center">
+        <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1">Anterior</a>
+        </li>
+        <li class="page-item"><a class="page-link" href="#">1</a></li>
+        <li class="page-item"><a class="page-link" href="#">2</a></li>
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+        <li class="page-item">
+            <a class="page-link">Próximo</a>
+        </li>
+    </ul>
+</nav>
+
+@code {
+    [Parameter]
+    public List<Pessoa> Pessoas { get; set; }
+    [Parameter]
+    public int Pegar { get; set; }
+    [Parameter]
+    public int Pular { get; set; }
+
+    public IEnumerable<Pessoa> PessoaList { get; set; } = Enumerable.Empty<Pessoa>();
+    public string? NomePesquisado { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        if (Pessoas.Count > 0)
+            PessoaList = Pessoas.Skip(Pular).Take(Pegar == 0 ? 8 : Pegar);
+    }
+
+    private void FiltrarNome(KeyboardEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(NomePesquisado))
+        {
+            if (e.Key == "Enter" && NomePesquisado.Length > 0)
+            {
+                NomePesquisado = NomePesquisado?.Trim();
+                if (Validacoes.ApenasNumeros(NomePesquisado))
+                    PessoaList = Pessoas.Where(x => x.CPF == NomePesquisado).Take(Pegar);
+                else
+                    PessoaList = Pessoas.Where(x => x.Nome.ToLower().Contains(NomePesquisado.ToLower())).Take(Pegar);
+            }
+        }
+        else if (Pessoas.Count() == 0)
+            PessoaList = Pessoas.Skip(Pular).Take(Pegar);
+
+    }
+
+
+}

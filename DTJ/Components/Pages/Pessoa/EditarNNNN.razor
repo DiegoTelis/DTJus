@@ -1,0 +1,66 @@
+﻿@page "/clientes/editar"
+
+@inject ApplicationDbContext _context
+@inject NavigationManager _nav
+
+
+<PageTitle>Editar Cliente</PageTitle>
+
+<h1>Editar Cliente</h1>
+
+@if(Model is null)
+{
+    <p>Não foi possivel carregar o cliente... Consulte novamente.</p>
+}
+else
+{
+
+    <EditForm Model="@Model" OnValidSubmit="@Alterar" OnInvalidSubmit="@Errada">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+   <FormPessoa Model="@Model" />
+
+    <button type="submit" class="btn btn-primary">Alterar</button>
+    <a href="/clientes">Cancelar</a>
+</EditForm>
+}
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    public Pessoa? Model { get; set; }
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     Model = await _context.Pessoas.FirstOrDefaultAsync(x => x.Id == 1) ?? new();
+
+    // }
+
+    protected override void OnInitialized()
+    {
+        Model = _context.Pessoas.FirstOrDefault(x => x.Id == 1) ?? new();
+    }
+
+    private async Task Alterar()
+    {
+        try
+        {
+            _context.Pessoas.Update(Model);
+            await _context.SaveChangesAsync();
+
+            _nav.NavigateTo("/clientes");
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+    private void Errada()
+    {
+        var n = Model.Nome;
+    }
+
+}

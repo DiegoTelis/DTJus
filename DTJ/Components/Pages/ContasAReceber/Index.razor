@@ -1,0 +1,157 @@
+﻿@page "/contasar/{tarefa:int?}/{tipo:int?}"
+@rendermode InteractiveServer
+@using Compartilhado.Enums
+@inject ApplicationDbContext _context
+@attribute [StreamRendering]
+
+
+<PageTitle>Contas a Receber</PageTitle>
+
+<div class="row">
+    <div class="col-md-3 mb-3">
+        <a href="/contasar/salvar" class="btn btn-primary">Novo AReceber</a>
+    </div>
+
+    <div class="col-md-2 mb-3">
+        <label class="Honorarios-css">
+            <InputCheckbox @bind-Value="Honorarios" @onclick="Atualiza" />
+            Honorarios
+        </label>
+    </div>
+    
+    <div class="col-md-2 mb-3">
+        <label class="Sucumbencia-css">
+            <InputCheckbox @bind-Value="Sucumbencia" @onclick="Atualiza" />
+            Sucumbencia
+        </label>
+    </div>
+   
+    <div class="col-md-2 mb-3">
+        <label class="Alvara-css">
+            <InputCheckbox @bind-Value="Alvara" @onclick="Atualiza" />
+            Alvara
+        </label>
+    </div>
+   
+    <div class="col-md-3 mb-3 row" style="text-align: end;">
+        <a>Aberta: @Model.Where(s => s.Status == 'A').Sum(x => x.Total).ToString("n2")</a>
+        <a>Fechado: @Model.Where(s => s.Status == 'B').Sum(x => x.Total).ToString("n2")</a>
+        <a>Total: @Model.Sum(x => x.Total).ToString("c")</a>
+    </div>
+
+</div>
+
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <td>Id</td>
+                <td>Descricao</td>
+                <td>Total</td>
+                <td>Status</td>
+                <td>Parcela</td>
+                <td>Tarefa</td>
+                <td>Cliente</td>
+                <td>*</td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model)
+            {
+                <tr class="@RetornaClass(r.TipoRecebimento)">
+                
+                    <td>@r.Id</td>
+                    <td>@r.Descricao</td>
+                    <td>@r.Total.ToString("n2")</td>
+                    <td>@r.Status</td>
+                    <td>@r.Parcela</td>
+                    <td>@r.Tarefa?.Descricao</td>
+                    <td>@r.Pessoa?.Nome </td>
+                    <td><a class="link-secondary" href="/contasar/salvar/@r.Id">Editar</a></td>
+                </tr>
+            }
+            
+        </tbody>
+    </table>
+
+</div>
+
+
+@code {
+    [Parameter]
+    public int Tarefa { get; set; }
+    [Parameter]
+    public int Tipo { get; set; }  //tipo recebimento
+    public bool Honorarios { get; set; }
+    public bool Sucumbencia { get; set; }
+    public bool Alvara { get; set; }
+
+    public List<ContasAReceber> Model { get; set; } = new();
+    public List<ContasAReceber> Recebimentos { get; set; } = new();
+    public List<int> lst { get; set; } = new();
+
+    private string RetornaClass(RecebimentoEnum rec)
+    {
+        if (rec == RecebimentoEnum.Honorarios)
+            return "Honorarios-css";
+        else if (rec == RecebimentoEnum.Sucumbencia)
+            return "Sucumbencia-css";
+        else
+            return "Alvara-css";
+    }
+    private List<int> RetornaTipos()
+    {
+        lst.Clear();
+        var x = Honorarios.ToString();
+
+        if (Honorarios)
+            lst.Add(1);
+        if (Sucumbencia)
+            lst.Add(2);
+        if (Alvara)
+            lst.Add(3);
+
+        return lst;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch(Tipo)
+        {
+            case (int)RecebimentoEnum.Honorarios:
+                {
+                    Honorarios = true;
+                    break;
+                }
+            case (int)RecebimentoEnum.Sucumbencia:
+                {
+                    Sucumbencia = true;
+                    break;
+                }
+            case (int)RecebimentoEnum.Alvara:
+                {
+                    Alvara = true;
+                    break;
+                }
+
+
+            default : 
+                {
+                    break;
+                }
+        }
+
+
+        Recebimentos = await _context.Recebimentos.AsNoTracking().Include(p => p.Pessoa).Include(t => t.Tarefa).ToListAsync();
+        Atualiza();
+    }
+
+    private async Task Atualiza()
+    {
+        await Task.Delay(200);
+        RetornaTipos();
+        Model = Recebimentos.Where(x => lst.Contains((int)x.TipoRecebimento)).ToList();
+    }
+
+
+}

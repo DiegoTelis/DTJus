@@ -1,0 +1,255 @@
+﻿@page "/tarefas/editar/{id:int}"
+
+@rendermode InteractiveServer
+@using Compartilhado.Enums
+@inject ApplicationDbContext _context
+@inject NavigationManager nav
+
+
+<PageTitle>Editar Tarefa</PageTitle>
+
+@* <h1>Editar Tarefa</h1> *@
+
+<EditForm Model="@Model" OnValidSubmit="@EditarTarefa" OnInvalidSubmit="@Errada">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row">
+        <div class="col-md-8 mb-3">
+            <label class="form-label">Descricao</label>
+            <InputText @bind-Value="Model.Descricao" class="form-control" />
+            <ValidationMessage For="@(() => Model.Descricao)" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Tipo</label>
+            <InputText @bind-Value="Model.Tipo" class="form-control" />
+            <ValidationMessage For="@(() => Model.Tipo)" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8 mb-3">
+            <label class="form-label">Cliente</label>
+            <InputSelect @bind-Value="Model.PessoaId" class="form-control">
+                @foreach (var p in Pessoas)
+                {
+                    <option value="@p.Id" >@p.Nome</option>
+                }
+                
+            </InputSelect>
+
+            <ValidationMessage For="@(() => Model.DataVencimento)" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Data Final do Prazo</label>
+            <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="Model.DataVencimento" class="form-control" />
+            
+            <ValidationMessage For="@(() => Model.DataVencimento)" />
+        </div>
+        
+
+
+    </div>
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Observação</label>
+            <InputTextArea @bind-Value="Model.Observacao" class="form-control" rows="3"></InputTextArea>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <InputCheckbox @bind-Value="Model.Concluido" />
+            <a>Finalizar Tarefa</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <a>Honorarios: @Model.Recebimentos.Where(x => x.TipoRecebimento == Compartilhado.Enums.RecebimentoEnum.Honorarios).Sum(x => x.Total).ToString("n2")</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <a>Sucumbencia:@Model.Recebimentos.Where(x => x.TipoRecebimento == Compartilhado.Enums.RecebimentoEnum.Sucumbencia).Sum(x => x.Total).ToString("n2")</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <a>Alvará: @Model.Recebimentos.Where(x => x.TipoRecebimento == Compartilhado.Enums.RecebimentoEnum.Alvara).Sum(x => x.Total).ToString("n2")</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <a style="font-size: large;font-weight: bold;">Total: @Model.Recebimentos.Sum(x => x.Total).ToString("c")</a>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Lançar Conta</label>
+            <InputNumber @bind-Value="aReceber.ValorBase" class="form-control" />
+        </div>
+        <div class="col-md-1 mb-3">
+            <label class="form-label">Parcelas</label>
+            <InputSelect @bind-Value="aReceber.Parcela" class="form-control">
+                @for (int i = 1; i<= 10; i++)
+                {
+                    <option value="@i">@i</option>
+                }
+            </InputSelect>
+        </div>
+        @if (aReceber.Parcela == 1)
+        {
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Data de Vencimento</label>
+                <InputDate @bind-Value="aReceber.DataVencimento" class="form-control" />
+            </div>
+        }else
+        {
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Dia do Vencimento</label>
+                <InputNumber @bind-Value="DiaVencimento" class="form-control" />
+            </div>
+        }
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Tipo</label>
+            <InputSelect @bind-Value="aReceber.TipoRecebimento" class="form-control">
+                <option value="@RecebimentoEnum.Honorarios">@RecebimentoEnum.Honorarios</option>
+                <option value="@RecebimentoEnum.Sucumbencia">@RecebimentoEnum.Sucumbencia</option>
+                <option value="@RecebimentoEnum.Alvara">@RecebimentoEnum.Alvara</option>
+            </InputSelect>
+
+        </div>
+        <div class="col-md-3 mb-3" >
+            <label class="form-label">Obs. Conta A Receber</label>
+            <InputText @bind-Value="aReceber.Descricao" class="form-control" />
+        </div>
+        <div class="col-md-2 mb-3">
+            <br />
+            <a class="btn btn-primary" @onclick="LancarAReceber">Gravar A Receber</a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-2 mb-3">
+
+        
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="/tarefas">Cancelar</a>
+        </div>
+        <div class="col-md-2 mb-3 alert-danger">
+            <a> Baixados</a>
+        </div>
+
+
+        <div class="col-md-2 mb-3 alert-danger">
+            <a>Honorarios: @Model.Recebimentos.Where(x => x.TipoRecebimento == Compartilhado.Enums.RecebimentoEnum.Honorarios && x.Status == 'B').Sum(x => x.Total).ToString("n2")</a>
+        </div>
+
+        <div class="col-md-2 mb-3 alert-danger">
+            <a>Sucumbencia:@Model.Recebimentos.Where(x => x.TipoRecebimento == Compartilhado.Enums.RecebimentoEnum.Sucumbencia && x.Status == 'B').Sum(x => x.Total).ToString("n2")</a>
+        </div>
+        <div class="col-md-2 mb-3 alert-danger">
+            <a>Alvará: @Model.Recebimentos.Where(x => x.TipoRecebimento == Compartilhado.Enums.RecebimentoEnum.Alvara && x.Status == 'B').Sum(x => x.Total).ToString("n2")</a>
+        </div>
+        <div class="col-md-2 mb-3 alert-danger">
+            <a style="font-size: large;font-weight: bold;">Total: @Model.Recebimentos.Where(x => x.Status == 'B').Sum(x => x.Total).ToString("c")</a>
+        </div>
+    </div>
+    
+
+</EditForm>
+
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    public int DiaVencimento { get; set; }
+    // public double Valor { get; set; }
+
+    // public int Parcelas { get; set; } = 1;
+
+    // private DateTime DataVencimento { get; set; }
+
+    private ContasAReceber aReceber { get; set; } = new();
+    private Tarefa Model { get; set; } = new();
+
+    private List<Pessoa>? Pessoas { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model = await _context.Tarefas.Include(x => x.Recebimentos).FirstOrDefaultAsync(x => x.Id == Id) ?? new();
+        Pessoas = await _context.Pessoas.AsNoTracking().OrderBy(x => x.Nome).ToListAsync();
+
+    }
+
+    private async Task LancarAReceber()
+    {
+        try
+        {
+            if (aReceber.Parcela > 1)
+            {
+                var lstAR = new List<ContasAReceber>();
+
+
+                var vencimento = Convert.ToDateTime(DiaVencimento + "/" + DateTime.Now.Month + "/" + DateTime.Now.Year);
+
+                var valorPacela = aReceber.ValorBase / aReceber.Parcela;
+
+                for (int i = 1; i <= aReceber.Parcela; i++)
+                {
+                    var ar = new ContasAReceber();
+
+                    ar.Descricao = aReceber.Descricao;
+                    ar.Parcela = i;
+                    ar.DataVencimento = vencimento.AddMonths(i);
+                    ar.PessoaId = Model.PessoaId;
+                    ar.TarefaId = Model.Id;
+                    ar.ValorBase = valorPacela;
+                    ar.TipoRecebimento = aReceber.TipoRecebimento;
+                    ar.Status = 'A';
+                    ar.Observacao = $"Parcela: {i}";
+                    lstAR.Add(ar);
+                }
+                await _context.Recebimentos.AddRangeAsync(lstAR);
+                Model.Recebimentos.AddRange(lstAR);
+            }
+            else
+            {
+                var ar = new ContasAReceber();
+                ar.Descricao = aReceber.Descricao;
+                ar.PessoaId = Model.PessoaId;
+                ar.TarefaId = Model.Id;
+                ar.ValorBase = aReceber.ValorBase;
+                ar.DataVencimento = aReceber.DataVencimento;
+
+                ar.TipoRecebimento = aReceber.TipoRecebimento;
+                ar.Status = 'A';
+                await _context.Recebimentos.AddAsync(ar);
+                // Model.Recebimentos.Add(ar);
+            }
+            await _context.SaveChangesAsync();
+
+            
+        }
+        catch(Exception ex)
+        {
+            
+        }
+    }
+
+    private async Task EditarTarefa()
+    {
+        try
+        {
+            if (Model.Id == 0)
+                return;
+
+            _context.Tarefas.Update(Model);
+            await _context.SaveChangesAsync();
+            nav.NavigateTo("/tarefas");
+        }
+        catch
+        {
+            
+        }
+
+
+    }
+
+    void Errada() { }
+
+}

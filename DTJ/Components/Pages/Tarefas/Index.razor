@@ -1,0 +1,113 @@
+﻿@page "/tarefas/{pegar:int?}/{pular:int?}"
+
+@rendermode InteractiveServer
+
+@attribute [StreamRendering]
+
+@inject ApplicationDbContext _context
+
+
+<PageTitle>Tarefas List1</PageTitle>
+<h1 class="text-center">Lista de Tarefas</h1>
+
+<a href="/tarefas/criar" class="btn btn-primary">Nova Tarefa</a>
+<br />
+<label class="form-label">Visualizar Todos? &nbsp;</label>
+<InputCheckbox @bind-Value="VisualizaTodos" @onchange="At2" @onclick="AtualizarLista" />
+
+@if (Tarefas.Count >0)
+{
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <td>Cod</td>
+                <td>Descricao</td>
+                <td>Tipo</td>
+                <td>Data Criação</td>
+                <td>Prazo Final</td>
+                <td>*</td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in Tarefas)
+            {
+                <tr style="@FundoGrid(t.Concluido)" >
+                <td>@t.Id</td>
+                <td>@t.Descricao</td>
+                <td>@t.Tipo</td>
+                <td>@t.DataCriacao</td>
+                <td>@t.DataVencimento</td>
+                <td>
+                    <a class="btn btn-info" href="/tarefas/editar/@t.Id">
+                    Editar
+                    </a>
+                </td>
+                </tr>
+              
+
+                    
+            }
+        </tbody>
+    </table>
+</div>
+}
+else 
+{
+    <a>Loading....</a>
+}
+
+<a href="/tarefas">Voltar</a>
+
+<a>
+    Pegar: 0 @Pegar   |   Pular: @Pular
+</a>
+@code {
+    [Parameter]
+    public int Pegar { get; set; } = 7;
+    [Parameter]
+    public int Pular { get; set; }
+
+    public bool VisualizaTodos { get; set; } = false;
+
+    public List<Tarefa> Tarefas { get; set; }
+
+    private string FundoGrid(bool bolean)
+    {
+        if (bolean)
+            return "background-color:beige";
+        else
+            return "background-color:white";
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Pegar = Pegar > 0 ? Pegar : 8;
+        Tarefas = await _context.Tarefas.AsNoTracking().Where(x => x.Concluido == false).Skip(Pular).Take(Pegar).OrderBy(x => x.DataVencimento).ToListAsync();
+    }
+
+    private async Task AtualizarLista()
+    {
+        if (!VisualizaTodos)
+            Tarefas =  await _context.Tarefas.AsNoTracking()
+            .Skip(Pular).Take(Pegar).OrderBy(x => x.DataVencimento)
+            .ToListAsync();
+        else
+            Tarefas = await _context.Tarefas.AsNoTracking()
+            .Where(x => x.Concluido == false)
+            .Skip(Pular).Take(Pegar).OrderByDescending(x => x.DataVencimento)
+            .ToListAsync();
+
+    }
+
+    void At1()
+    {
+        
+    }
+    void At2()
+    {
+
+    }
+
+}
