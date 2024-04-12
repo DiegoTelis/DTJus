@@ -1,0 +1,177 @@
+﻿@using System.Text
+@inject ApplicationDbContext _context
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Descricao</label>
+        <InputText @bind-Value="Model.Descricao" class="form-control" />
+        <ValidationMessage For="@(() => Model.Descricao)" />
+    </div>
+    <div class="col-md-3 mb-3">
+        <label class="form-label">Nº Protocolo</label>
+        <InputText @bind-Value="Model.NumProtocolo" class="form-control" />
+        <ValidationMessage For="@(() => Model.NumProtocolo)" />
+    </div>
+    <div class="col-md-3 mb-3">
+        <label class="form-label">Tipo</label>
+        <InputText @bind-Value="Model.Tipo" class="form-control" />
+        <ValidationMessage For="@(() => Model.Tipo)" />
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Cliente</label>
+        <InputSelect @bind-Value="Model.PessoaId" class="form-control">
+            @foreach (var p in Pessoas)
+            {
+                <option value="@p.Id">@p.Nome</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => Model.PessoaId)" />
+    </div>
+    <div class="col-md-2 mb-3">
+        <label >Tipos de prazo</label> <br/>
+        <InputRadioGroup @bind-Value="TipoPrazo" style="outline:none">
+            <InputRadio Value="0" style="outline:none" /> <a title="Será Calculado os dias corridos">Corridos</a> &nbsp;
+            <InputRadio Value="1" style="outline:none" /> <a title="Será Calculado os dias menos (sabado e domingo)">Útil</a> <br />
+            <InputRadio Value="2" style="outline:none" /> <a title="Será Considerado os feriados lançados">Feriados</a><br />
+        </InputRadioGroup>
+    </div>
+    <div class="col-md-1 mb-3">
+        <label class ="form-label">Calcular</label>
+        <InputNumber @bind-Value="Prazo" style="width:50px"/>
+    </div>
+    <div class="col-md-3 mb-3">
+        <label class="form-label">Data Vencimento</label>
+        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="Model.DataVencimento" class="form-control" />
+        <ValidationMessage For="@(() => Model.DataVencimento)" />
+    </div>
+
+</div>
+<div class="row">
+    <div class="col-md-12 mb-3">
+        <label class="form-label">Observação</label>
+        <InputTextArea @bind-Value="Model.Observacao" class="form-control" rows="3"></InputTextArea>
+    </div>
+</div>
+
+@code {
+    [EditorRequired]
+    [Parameter]
+    public Tarefa Model { get; set; }
+    [EditorRequired]
+    [Parameter]
+    public List<Pessoa> Pessoas { get; set; }
+    public int TipoPrazo { get; set; }
+    List<int> FeriadosList = new();
+    private int _prazo; 
+    public int Prazo 
+    {
+        get { return _prazo; }
+        set { _prazo = value < 0 ? 0 : value; CalcularPrazo(value < 0 ? 0 : value); }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        var lst = await _context.Feriados.AsNoTracking().Select(d => d.Dia).ToListAsync();
+        foreach (var d in lst)
+        {
+            FeriadosList.Add(d.DayOfYear);
+        }
+
+    }
+
+    private void CalcularPrazo(int prazo)
+    {
+        if (prazo == 0)
+            return;
+        bool consultando = true;
+        int cont = 1;
+        int diaContado = 0;
+
+        List<Periodo> Periodos = new();
+        
+
+        switch (TipoPrazo)
+        {
+            case 1:
+                while (consultando)
+                {
+                    var dia = DateTime.Now.AddDays(cont);
+                    if (dia.DayOfWeek == DayOfWeek.Saturday || dia.DayOfWeek == DayOfWeek.Sunday)
+                    {
+                        Periodos.Add(new Periodo("X", dia));
+                    }
+                    else
+                    {
+                        diaContado++;
+
+                        Periodos.Add(new Periodo(diaContado.ToString(), dia));
+                        if (diaContado == prazo)
+                        {
+                            consultando = false;
+                            Model.DataVencimento = dia;
+                        }
+                    }
+                    cont++;
+                }
+                break;
+
+            case 2:
+                while (consultando)
+                {
+                    var dia = DateTime.Now.AddDays(cont);
+                    if (dia.DayOfWeek == DayOfWeek.Saturday || dia.DayOfWeek == DayOfWeek.Sunday ||  FeriadosList.Contains(dia.DayOfYear) )
+                    {
+                        Periodos.Add(new Periodo("X", dia));
+                    }
+                    else
+                    {
+                        diaContado++;
+
+                        Periodos.Add(new Periodo(diaContado.ToString(), dia));
+                        if (diaContado == prazo)
+                        {
+                            consultando = false;
+                            Model.DataVencimento = dia;
+                        }
+                    }
+                    cont++;
+                }
+                break;
+
+            default:
+                while (consultando)
+                {
+                    var dia = DateTime.Now.AddDays(cont);
+
+                    diaContado++;
+                    Periodos.Add(new Periodo(diaContado.ToString(), dia));
+                    if (diaContado == prazo)
+                    {
+                        consultando = false;
+                        Model.DataVencimento = dia;
+                    }
+                    cont++;
+                }
+                break;
+
+        }
+
+
+
+
+    }
+
+    private class Periodo
+    {
+        public Periodo(string diaCorrido, DateTime dia)
+        {
+            DiaCorrido = diaCorrido;
+            Dia = dia;
+        }
+
+        public string DiaCorrido { get; set; }
+        public DateTime Dia { get; set; }
+
+    }
+}

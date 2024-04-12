@@ -1,9 +1,13 @@
+using DTJ;
 using DTJ.Components;
 using DTJ.Components.Account;
 using DTJ.Data;
+using DTJ.Servicos;
+using DTJ.Servicos.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +19,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
 
 builder.Services.AddAuthentication(options =>
     {
@@ -34,9 +39,14 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+builder.Services.AddTransient<ITelegramService, TelegramService>();
+//builder.Services.AddHttpClient();
+
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -51,6 +61,9 @@ else
 }
 
 app.UseHttpsRedirection();
+
+//aq
+Configuracao.HashBot = app.Configuration.GetValue<string>("HashBot");
 
 app.UseStaticFiles();
 app.UseAntiforgery();

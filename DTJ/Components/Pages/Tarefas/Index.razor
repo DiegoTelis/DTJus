@@ -1,19 +1,30 @@
-﻿@page "/tarefas/{pegar:int?}/{pular:int?}"
-
+﻿@page "/tarefas/{pegar:int?}"
 @rendermode InteractiveServer
-
 @attribute [StreamRendering]
-
 @inject ApplicationDbContext _context
+@inject ITelegramService _telegram 
 
+@implements IDisposable
 
-<PageTitle>Tarefas List1</PageTitle>
-<h1 class="text-center">Lista de Tarefas</h1>
+<PageTitle>Lista de Tarefas</PageTitle>
 
-<a href="/tarefas/criar" class="btn btn-primary">Nova Tarefa</a>
-<br />
-<label class="form-label">Visualizar Todos? &nbsp;</label>
-<InputCheckbox @bind-Value="VisualizaTodos" @onchange="At2" @onclick="AtualizarLista" />
+<div class="row">
+    <div class="col-md-4 mb-1">
+        <a href="/tarefas/criar" class="btn btn-primary">Nova Tarefa</a>
+    </div>
+    <div class="col-md-4">
+        <InputCheckbox @bind-Value="VisualizaTodos" />
+        <label class="form-label">Visualizar Todos</label>
+    </div>
+    <div class="col-md-4">
+        <InputCheckbox @bind-Value="HabilitaConsultaTelegram" />
+        <label class="form-label">Habilitar Consulta via Telegram</label>
+    </div>
+</div>
+<div class="row">
+    <InputText @bind-Value="TarefaPesquisada" class="form-control"></InputText>
+</div>
+
 
 @if (Tarefas.Count >0)
 {
@@ -56,21 +67,106 @@ else
 {
     <a>Loading....</a>
 }
+<nav >
+    <ul class="pagination justify-content-center">
+        <li class="@(PagAtual==1 ? "page-item disabled" : "page-item")">
+            <a class="page-link" @onclick="@(() => MudarPagina(PagAtual-1))" tabindex="-1">Anterior</a>
+        </li>
+        @for (int i = 1; i <= TotalPages; i++)
+        {
+            int pag = i;
+            <li class="page-item"><a class="page-link" @onclick="@(() => MudarPagina(pag))">@i</a></li>
+        }
+        <li class="@(TotalPages==PagAtual ? "page-item disabled" : "page-item")">
+            <a class="page-link" @onclick="@(() => MudarPagina(PagAtual+1))">Próximo</a>
+        </li>
+    </ul>
+</nav>
 
-<a href="/tarefas">Voltar</a>
 
-<a>
-    Pegar: 0 @Pegar   |   Pular: @Pular
-</a>
 @code {
     [Parameter]
-    public int Pegar { get; set; } = 7;
-    [Parameter]
-    public int Pular { get; set; }
+    public int Pegar { get; set; }
+    public int PagAtual { get; set; } = 1;
+    public int TotalPages { get; set; }
 
-    public bool VisualizaTodos { get; set; } = false;
+    private string _tarefaPesquisada;
+    public string? TarefaPesquisada 
+    {
+        get { return _tarefaPesquisada; }
+        set { _tarefaPesquisada = value.Trim(); AtualizarLista(); }
+    }
+    private bool _visualizaTodos;
+    public bool VisualizaTodos 
+    {
+        get { return _visualizaTodos; }
+        set 
+        { 
+            _visualizaTodos = value;
+            MudarPagina(1);
+        }
+    }
+    private bool _habilitaConsultaTelegram;
+    public bool HabilitaConsultaTelegram 
+    { 
+        get { return _habilitaConsultaTelegram; }
+        set 
+        { 
+            _habilitaConsultaTelegram = value;
+            _telegram.LerTelegram(value);
+        }
+    }
 
-    public List<Tarefa> Tarefas { get; set; }
+    public List<Tarefa> Tarefas { get; set; } = new();
+    public List<Tarefa> TarefasBase { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        if (Pegar == 0)
+            Pegar = 6;
+        TarefasBase = await _context.Tarefas.AsNoTracking().ToListAsync();
+        VisualizaTodos = false;
+
+        TotalPages = (int)Math.Ceiling(TarefasBase.Where(x => x.Concluido == false).Count() / (decimal)Pegar);
+
+        Tarefas = TarefasBase.Where(x => x.Concluido == false)
+            .Skip((PagAtual - 1) * Pegar).Take(Pegar).OrderByDescending(x => x.DataVencimento)
+            .ToList();
+
+    }
+
+    private void AtualizarLista()
+    {
+        Pegar = Pegar == 0 ? 1 : Pegar;
+        if (VisualizaTodos && !string.IsNullOrEmpty(TarefaPesquisada))
+        {
+            TotalPages = (int)Math.Ceiling(TarefasBase.Where(x => x.Descricao.ToLower().Contains(TarefaPesquisada.ToLower())).Count() / (decimal)Pegar);
+            Tarefas = TarefasBase.Where(x => x.Descricao.ToLower().Contains(TarefaPesquisada.ToLower()))
+            .Skip((PagAtual - 1) * Pegar).Take(Pegar)
+            .OrderByDescending(x => x.DataVencimento).ToList();
+        }
+        else if (VisualizaTodos && string.IsNullOrEmpty(TarefaPesquisada))
+        {
+            TotalPages = (int)Math.Ceiling(TarefasBase.Count / (decimal)Pegar);
+            Tarefas = TarefasBase.Skip((PagAtual - 1) * Pegar).Take(Pegar)
+            .OrderByDescending(x => x.DataVencimento).ToList();
+        }
+        else if (!VisualizaTodos && !string.IsNullOrEmpty(TarefaPesquisada))
+        {
+            TotalPages = (int)Math.Ceiling(TarefasBase.Where(x => x.Concluido == false && x.Descricao.ToLower().Contains(TarefaPesquisada.ToLower())).Count() / (decimal)Pegar);
+            Tarefas = TarefasBase.Where(x => x.Concluido == false && x.Descricao.ToLower().Contains(TarefaPesquisada.ToLower()))
+           .Skip((PagAtual - 1) * Pegar).Take(Pegar).OrderBy(x => x.DataVencimento)
+           .ToList();
+        }
+        else
+        {
+            TotalPages = (int)Math.Ceiling(TarefasBase.Where(x => x.Concluido == false).Count() / (decimal)Pegar);
+            Tarefas = TarefasBase.Where(x => x.Concluido == false)
+           .Skip((PagAtual - 1) * Pegar).Take(Pegar).OrderBy(x => x.DataVencimento)
+           .ToList();
+        }
+    }
 
     private string FundoGrid(bool bolean)
     {
@@ -81,33 +177,19 @@ else
 
     }
 
-    protected override async Task OnInitializedAsync()
+    private void MudarPagina(int pag)
     {
-        Pegar = Pegar > 0 ? Pegar : 8;
-        Tarefas = await _context.Tarefas.AsNoTracking().Where(x => x.Concluido == false).Skip(Pular).Take(Pegar).OrderBy(x => x.DataVencimento).ToListAsync();
+        if(pag>0 && pag<=TotalPages)
+        {
+            PagAtual = pag;
+            AtualizarLista();
+        }
     }
 
-    private async Task AtualizarLista()
+    public void Dispose()
     {
-        if (!VisualizaTodos)
-            Tarefas =  await _context.Tarefas.AsNoTracking()
-            .Skip(Pular).Take(Pegar).OrderBy(x => x.DataVencimento)
-            .ToListAsync();
-        else
-            Tarefas = await _context.Tarefas.AsNoTracking()
-            .Where(x => x.Concluido == false)
-            .Skip(Pular).Take(Pegar).OrderByDescending(x => x.DataVencimento)
-            .ToListAsync();
-
+        HabilitaConsultaTelegram = false;
     }
 
-    void At1()
-    {
-        
-    }
-    void At2()
-    {
-
-    }
 
 }

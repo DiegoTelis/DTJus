@@ -1,0 +1,46 @@
+﻿@page "/t"
+@rendermode InteractiveServer
+<h3>Testes1 - @ValorSelecionado  - @Codigo</h3>
+
+@* <InputSelect ValueChanged=@((string v)=>Alterado()) ValueExpression="@(()=> ValorSelecionado)" Value="@ValorSelecionado">
+    <option value="">Selecione uma opção</option>
+    <option value="opcao1">Opção 1</option>
+    <option value="opcao2">Opção 2</option>
+    <option value="opcao3">Opção 3</option>
+</InputSelect>
+ *@
+
+<InputSelect @bind-Value=ValorSelecionado>
+    <option value="">Selecione uma opção</option>
+    <option value="opcao1">Opção 1</option>
+    <option value="opcao2">Opção 2</option>
+    <option value="opcao3">Opção 3</option>
+</InputSelect>
+
+
+@code {
+    private string _valorSelecionado;
+    public string ValorSelecionado 
+    { 
+        get { return _valorSelecionado; }
+        set 
+        { 
+            _valorSelecionado = value;
+            Codigo++;
+        }
+    }
+    public int Codigo { get; set; } = 1;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Console.WriteLine("Valor inicial selecionado: " + ValorSelecionado);
+    }
+
+    private void Alterado()
+    {
+        Console.WriteLine("passou no alterado");
+    }
+
+
+}

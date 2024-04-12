@@ -1,5 +1,4 @@
-﻿@page "/clientes/{pegar:int?}/{pular:int?}"
-
+﻿@page "/clientes/{pegar:int?}"
 
 @rendermode InteractiveServer
 
@@ -8,57 +7,28 @@
 
 <PageTitle>Clientes</PageTitle>
 
-<h1 class="text-center" >Clientes12</h1>
 <a href="/clientes/novo" class="btn btn-primary">Novo Cliente</a>
 
 @if (Pessoas is not null)
 {
-    <ConsultarPessoa Pessoas="@Pessoas" Pegar="@Pegar" Pular="@Pular"></ConsultarPessoa>
+    <ConsultarPessoa Pessoas="@Pessoas" Pegar="@Pegar"></ConsultarPessoa>
 }
 
 
 
 
 
-<a>Pegar:@Pegar   e  Pular:@Pular</a>
+
 
 @code {
     [Parameter]
-    public int Pegar { get; set; } = 8;
-    [Parameter]
-    public int Pular { get; set; } = 0;
+    public int Pegar { get; set; }
 
     public List<Pessoa> Pessoas { get; set; } = new();
-    // public List<PessoaVM>? PessoasListView { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        Pegar = Pegar == 0 ? 8 : Pegar;
-        Pular = Pular == 0 ? 0 : Pular;
-    }
 
     protected override async Task OnInitializedAsync()
     {
-        Pessoas = await _context.Pessoas.AsNoTracking().OrderBy(x => x.Nome).ToListAsync();
+        Pessoas = await _context.Pessoas.AsNoTracking().ToListAsync();
     }
-
-    //Pessoas = await _context.Pessoas.AsNoTracking().OrderBy(x => x.Nome).ToListAsync();
-
-    // await GetPessoas(Pessoas);
-
-
-
-    // private async Task GetPessoas (IEnumerable<Pessoa> pessoas)
-    // {
-    //     PessoasListView = new();
-    //     foreach(var p in pessoas)
-    //     {
-    //         PessoasListView.Add(new PessoaVM(p.Id, p.Nome, p.CPF, p.Telefone));
-        //     }
-
-
-        // }
-
-
 
 }

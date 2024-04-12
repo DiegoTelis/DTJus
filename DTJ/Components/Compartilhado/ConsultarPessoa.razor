@@ -1,7 +1,6 @@
 ﻿@attribute [StreamRendering]
-
 <div>
-    <InputText @bind-Value="NomePesquisado" class="form-control" @onkeydown="FiltrarNome"></InputText>
+    <InputText @bind-Value="NomePesquisado" class="form-control"  ></InputText>
 </div>
 
 <div class="table-responsive">
@@ -25,7 +24,7 @@
                     <td>@p.CPF</td>
                     <td>
                         <a class="btn btn-info" href="/clientes/editar/@p.Id">Editar</a>
-                        <a class="btn btn-info" href="/clientes/excluir/@p.Id">Excluir</a>
+                        <a class="btn btn-danger" href="/clientes/excluir/@p.Id">Excluir</a>
                     </td>
                 </tr>
             }
@@ -35,14 +34,16 @@
 
 <nav aria-label="Navegação de página exemplo">
     <ul class="pagination justify-content-center">
-        <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1">Anterior</a>
+        <li class="@(PagAtual==1 ? "page-item disabled" : "page-item")">
+            <a class="page-link" @onclick="@(() => MudarPagina(PagAtual-1))" tabindex="-1">Anterior</a>
         </li>
-        <li class="page-item"><a class="page-link" href="#">1</a></li>
-        <li class="page-item"><a class="page-link" href="#">2</a></li>
-        <li class="page-item"><a class="page-link" href="#">3</a></li>
-        <li class="page-item">
-            <a class="page-link">Próximo</a>
+        @for (int i = 1; i <= TotalPages; i++)
+        {
+            int pag = i;
+            <li class="page-item"><a class="page-link" @onclick="@(() => MudarPagina(pag))">@i</a></li>
+        }
+        <li class="@(TotalPages==PagAtual ? "page-item disabled" : "page-item")">
+            <a class="page-link" @onclick="@(() => MudarPagina(PagAtual+1))">Próximo</a>
         </li>
     </ul>
 </nav>
@@ -52,35 +53,68 @@
     public List<Pessoa> Pessoas { get; set; }
     [Parameter]
     public int Pegar { get; set; }
-    [Parameter]
-    public int Pular { get; set; }
-
     public IEnumerable<Pessoa> PessoaList { get; set; } = Enumerable.Empty<Pessoa>();
-    public string? NomePesquisado { get; set; }
 
+    public int PagAtual { get; set; } = 1;
+    public int PagTamanho { get; set; } = 6; 
+    public int TotalPages{ get; set; }
+
+    private string _nomePesquisado;
+    public string? NomePesquisado 
+    { 
+        get { return _nomePesquisado; }
+        set 
+        { 
+            _nomePesquisado = value.Trim(); 
+            FiltrarNome(); 
+        }
+    }
 
     protected override void OnInitialized()
     {
+        if (Pegar > 0)
+            PagTamanho = Pegar;
+
         if (Pessoas.Count > 0)
-            PessoaList = Pessoas.Skip(Pular).Take(Pegar == 0 ? 8 : Pegar);
+        {
+            TotalPages = (int)Math.Ceiling(Pessoas.Count() / (double)PagTamanho);
+            PessoaList = Pessoas.Skip((PagAtual - 1) * PagTamanho).Take(PagTamanho).OrderBy(n => n.Nome);
+
+        }
     }
 
-    private void FiltrarNome(KeyboardEventArgs e)
+    public void MudarPagina(int page)
+    {
+        if (page>0 && page <= TotalPages)
+        {
+            PagAtual = page;
+            PessoaList = Pessoas.Skip((page - 1) * PagTamanho).Take(PagTamanho).OrderBy(n => n.Nome);
+        }
+    }
+
+    private void FiltrarNome()
     {
         if (!string.IsNullOrEmpty(NomePesquisado))
         {
-            if (e.Key == "Enter" && NomePesquisado.Length > 0)
+            if (Validacoes.ApenasNumeros(NomePesquisado))
             {
-                NomePesquisado = NomePesquisado?.Trim();
-                if (Validacoes.ApenasNumeros(NomePesquisado))
-                    PessoaList = Pessoas.Where(x => x.CPF == NomePesquisado).Take(Pegar);
-                else
-                    PessoaList = Pessoas.Where(x => x.Nome.ToLower().Contains(NomePesquisado.ToLower())).Take(Pegar);
+                var result = Pessoas.Where(x => x.CPF == NomePesquisado).Take(PagTamanho).OrderBy(n => n.Nome);
+                if (result.Count() == 0)
+                    result = Pessoas.Where(x => x.Telefone == NomePesquisado).Take(PagTamanho).OrderBy(n => n.Nome);
+
+                PessoaList = result;
+            }
+            else
+            {
+                PessoaList = Pessoas.Where(x => x.Nome.ToLower().Contains(NomePesquisado.ToLower())).Take(PagTamanho).OrderBy(n => n.Nome);
+                TotalPages = (int)Math.Ceiling(PessoaList.Count() / (double)PagTamanho);
             }
         }
-        else if (Pessoas.Count() == 0)
-            PessoaList = Pessoas.Skip(Pular).Take(Pegar);
-
+        else
+        {
+            TotalPages = (int)Math.Ceiling(Pessoas.Count() / (double)PagTamanho);
+            PessoaList = Pessoas.Skip((PagAtual - 1) * PagTamanho).Take(PagTamanho).OrderBy(n => n.Nome);
+        }
     }
 
 

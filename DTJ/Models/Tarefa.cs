@@ -13,6 +13,7 @@ public class Tarefa
     [Required(ErrorMessage = "É necessario informar a Descricao")]
     [MaxLength(200,ErrorMessage = "Descricao deve ter no máximo 200 caracteres")]
     public string Descricao { get; set; }
+    public string NumProtocolo { get; set; }
 
     [Required(ErrorMessage ="É necessario informar a pessoa")]
     public int PessoaId { get; set; }

@@ -1,4 +1,4 @@
-﻿@page "/contasar/{tarefa:int?}/{tipo:int?}"
+﻿@page "/contasar/{tarefa:int?}"
 @rendermode InteractiveServer
 @using Compartilhado.Enums
 @inject ApplicationDbContext _context
@@ -34,9 +34,9 @@
     </div>
    
     <div class="col-md-3 mb-3 row" style="text-align: end;">
-        <a>Aberta: @Model.Where(s => s.Status == 'A').Sum(x => x.Total).ToString("n2")</a>
-        <a>Fechado: @Model.Where(s => s.Status == 'B').Sum(x => x.Total).ToString("n2")</a>
-        <a>Total: @Model.Sum(x => x.Total).ToString("c")</a>
+        <a>Aberta: @Recebimentos.Where(s => s.Status == 'A' && lst.Contains((int)s.TipoRecebimento)).Sum(x => x.Total).ToString("n2")</a>
+        <a>Fechado: @Recebimentos.Where(s => s.Status == 'B' && lst.Contains((int)s.TipoRecebimento)).Sum(x => x.Total).ToString("n2")</a>
+        <a>Total: @Recebimentos.Where(x => lst.Contains((int)x.TipoRecebimento)).Sum(x => x.Total).ToString("c")</a>
     </div>
 
 </div>
@@ -77,18 +77,58 @@
 </div>
 
 
+<nav >
+    <ul class="pagination justify-content-center">
+        <li class="@(PagAtual==1 ? "page-item disabled" : "page-item")">
+            <a class="page-link" @onclick="@(() => MudarPagina(PagAtual-1))" tabindex="-1">Anterior</a>
+        </li>
+        @for (int i = 1; i <= TotalPages; i++)
+        {
+            int pag = i;
+            <li class="page-item"><a class="page-link" @onclick="@(() => MudarPagina(pag))">@i</a></li>
+        }
+        <li class="@(TotalPages==PagAtual ? "page-item disabled" : "page-item")">
+            <a class="page-link" @onclick="@(() => MudarPagina(PagAtual+1))">Próximo</a>
+        </li>
+    </ul>
+</nav>
+
+
 @code {
     [Parameter]
     public int Tarefa { get; set; }
-    [Parameter]
-    public int Tipo { get; set; }  //tipo recebimento
-    public bool Honorarios { get; set; }
-    public bool Sucumbencia { get; set; }
-    public bool Alvara { get; set; }
+    // [Parameter]
+    // public int Tipo { get; set; }  //tipo recebimento
+    private bool _honorarios;
+    public bool Honorarios { get { return _honorarios; } set { _honorarios = value; Atualiza(); } }
+    private bool _sucubencia;
+    public bool Sucumbencia { get { return _sucubencia; } set { _sucubencia = value; Atualiza(); } }
+    private bool _alvara;
+    public bool Alvara { get { return _alvara; } set { _alvara = value; Atualiza(); } }
+
+    public int PagAtual { get; set; } = 1;
+    public int Pegar { get; set; }
+    public int TotalPages { get; set; }
+
 
     public List<ContasAReceber> Model { get; set; } = new();
     public List<ContasAReceber> Recebimentos { get; set; } = new();
     public List<int> lst { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        if (Pegar == 0)
+            Pegar = 7;
+
+
+        Recebimentos = await _context.Recebimentos.AsNoTracking().Include(p => p.Pessoa).Include(t => t.Tarefa).ToListAsync();
+
+        TotalPages = (int)Math.Ceiling(Recebimentos.Count / (decimal)Pegar);
+
+        Atualiza();
+    }
+
 
     private string RetornaClass(RecebimentoEnum rec)
     {
@@ -99,10 +139,9 @@
         else
             return "Alvara-css";
     }
-    private List<int> RetornaTipos()
+    private void CarregaTipos()
     {
         lst.Clear();
-        var x = Honorarios.ToString();
 
         if (Honorarios)
             lst.Add(1);
@@ -111,46 +150,28 @@
         if (Alvara)
             lst.Add(3);
 
-        return lst;
     }
 
-    protected override async Task OnInitializedAsync()
+
+    private void Atualiza()
     {
-        switch(Tipo)
+        CarregaTipos();
+
+        int totalList =  Recebimentos.Where(x => lst.Contains((int)x.TipoRecebimento)).Count();
+        TotalPages = (int)Math.Ceiling(totalList / (decimal)Pegar);
+
+        Model = Recebimentos.Where(x => lst.Contains((int)x.TipoRecebimento))
+        .Skip((PagAtual - 1) * Pegar).Take(Pegar).ToList();
+    }
+
+    private void MudarPagina(int pag)
+    {
+        if (pag > 0 && pag <= TotalPages)
         {
-            case (int)RecebimentoEnum.Honorarios:
-                {
-                    Honorarios = true;
-                    break;
-                }
-            case (int)RecebimentoEnum.Sucumbencia:
-                {
-                    Sucumbencia = true;
-                    break;
-                }
-            case (int)RecebimentoEnum.Alvara:
-                {
-                    Alvara = true;
-                    break;
-                }
-
-
-            default : 
-                {
-                    break;
-                }
+            PagAtual = pag;
+            Atualiza();
         }
 
-
-        Recebimentos = await _context.Recebimentos.AsNoTracking().Include(p => p.Pessoa).Include(t => t.Tarefa).ToListAsync();
-        Atualiza();
-    }
-
-    private async Task Atualiza()
-    {
-        await Task.Delay(200);
-        RetornaTipos();
-        Model = Recebimentos.Where(x => lst.Contains((int)x.TipoRecebimento)).ToList();
     }
 
 

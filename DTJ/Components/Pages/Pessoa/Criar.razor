@@ -12,48 +12,8 @@
 <EditForm Model="@Model" OnValidSubmit="@Gravar" OnInvalidSubmit="@Errada">
     <DataAnnotationsValidator />
     <ValidationSummary />
-
-    <div class="row">
-        <div class="col-md-8 mb-3">
-            <label class="form-label">Nome Completo</label>
-            <InputText @bind-Value="Model.Nome" class="form-control" />
-            <ValidationMessage For="@(() => Model.Nome)" />
-        </div>
-
-        <div class="col-md-4 mb-3">
-            <label class="form-label">CPF</label>
-            <InputText @bind-Value="Model.CPF" class="form-control" />
-            <ValidationMessage For="@(() => Model.CPF)" />
-        </div>
-    </div>
     
-
-    <div class="form-group mb-3">
-        <label for="inputAddress2">Endereço</label>
-        <InputText type="text" class="form-control"  placeholder="Endereço completo" @bind-Value="Model.Endereco" />
-        <ValidationMessage For="@(() => Model.Endereco)" />
-    </div>
-    <div class="row">
-        <div class="form-group col-md-6 mb-3">
-            <label for="inputCity">Cidade</label>
-            <InputText type="text" class="form-control" @bind-Value="Model.Cidade" />
-            <ValidationMessage For="@(() => Model.Cidade)" />
-        </div>
-        <div class="form-group col-md-4 mb-3">
-            <label for="inputEstado">Estado</label>
-            <InputSelect class="form-control" @bind-Value="Model.Estado">
-                <option selected>GO</option>
-                <option>DF</option>
-            </InputSelect>
-            <ValidationMessage For="@(() => Model.Estado)" />
-        </div>
-        <div class="form-group col-md-2 mb-3">
-            <label for="inputCEP">CEP</label>
-            <InputText type="text" class="form-control" @bind-Value="Model.CEP" />
-        </div>
-    </div>
-
-
+    <FormPessoa Model="@Model"/>
 
     <button type="submit" class="btn btn-primary">Criar</button>
     <a href="/clientes">Cancelar</a>

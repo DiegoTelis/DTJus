@@ -8,7 +8,7 @@
 <h1>Cadastrar Contas A Receber</h1>
 
 
-<EditForm Model="@Model" OnValidSubmit="Gravar"  OnInvalidSubmit="Gravar1" >
+<EditForm Model="@Model" OnValidSubmit="Gravar"  >
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -93,12 +93,13 @@
         </div>
         <div class="col-md-3 mb-3">
             <label class="form-label">Tarefa Vinculada</label>
-            @* <InputSelect @bind-Value="Model.TarefaId" class="form-control" @onchange="TarefaSelecionada" @onselect="TarefaSelecionada" ValueChanged="@(() => TarefaSelecionada())" >
+            <InputSelect @bind-Value="TarefaId" class="form-control" >
+                <option value="0">Nenhuma</option>
                 @foreach (var t in Tarefas)
                 {
                     <option value="@t.Id">@t.Descricao</option>
                 }
-            </InputSelect> *@
+            </InputSelect>
         </div>
 
     </div>
@@ -117,19 +118,43 @@
 
     <button type="submit" class="btn btn-primary">Criar</button>
     <a href="/contasar">Cancelar</a>
+    @if (mostrarErro)
+    {
+        <div class="alert alert-danger" role="alert">
+            @mensagemErro
+        </div>
+    }
 
 </EditForm>
+
+
 
 
 @code {
     [Parameter]
     public int? Id { get; set; }
+    public bool mostrarErro { get; set; } = false;
+    public string mensagemErro { get; set; }
+    public int TarefaId 
+    { 
+        get
+        {
+            return Model.TarefaId;
+        }
+        set
+        {
+            Model.TarefaId = value;
+            Model.PessoaId = Tarefas.Where(x => x.Id == Model.TarefaId).Select(p => p.PessoaId).FirstOrDefault();
+        }
+    }
+
 
     private ContasAReceber Model { get; set; } = new();
     public List<Tarefa> Tarefas { get; set; } = new();
     public List<Pessoa> Pessoas{ get; set; } = new();
 
-    protected override async Task OnParametersSetAsync()
+
+    protected override async Task OnInitializedAsync()
     {
         if (Id > 0)
             Model = await _context.Recebimentos.FirstOrDefaultAsync(x => x.Id == Id) ?? new();
@@ -138,25 +163,41 @@
         Pessoas = await _context.Pessoas.AsTracking().Select(e => new Pessoa { Id = e.Id, Nome = e.Nome }).ToListAsync();
 
     }
+    protected override async Task OnParametersSetAsync()
+    {
+
+    }
 
     private async Task Gravar()
     {
+        if (Model.ValorRecebido > 0 && Model.DataRecebimento is not null)
+        {
+            Model.Status = 'B';
 
-        if (Model.Id == 0)
-            await _context.Recebimentos.AddAsync(Model);
+
+            if (Model.Id > 0)
+                _context.Recebimentos.Update(Model);
+            else
+                await _context.Recebimentos.AddAsync(Model);
+
+            await _context.SaveChangesAsync();
+            nav.NavigateTo("/contasar");
+        }
         else
-            _context.Recebimentos.Update(Model);
-
-        await _context.SaveChangesAsync();
+        {
+            mostrarErro= true;
+            mensagemErro = "Confirme o Valor e a Data de Recebimento se estão Preenchidos e tente novamente.";
+        }
     }
 
-    private async Task Gravar1()
-    {
+    // private async Task Gravar1() 
+    // {
 
-    }
-    private void TarefaSelecionada()
-    {
-        Model.PessoaId = Tarefas.Where(p => p.PessoaId == Model.PessoaId).Select(p => p.Id).FirstOrDefault();
-    }
+    // }
+
+    // private void HandleSelectionChange(ChangeEventArgs e)
+    // {
+    //     Model.PessoaId = Tarefas.Where(p => p.PessoaId == Model.PessoaId).Select(p => p.Id).FirstOrDefault();
+    // }
 
 }

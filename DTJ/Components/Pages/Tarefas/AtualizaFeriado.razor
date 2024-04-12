@@ -1,0 +1,125 @@
+﻿@page "/atualizaferiados"
+@using System.Globalization
+@using ClosedXML.Excel
+@inject ApplicationDbContext _context
+
+@rendermode InteractiveServer
+@attribute [StreamRendering]
+
+<PageTitle>Atualiza Feriados</PageTitle>
+
+<div class="row">
+
+    <label >Selecionar caminho do arquivo.</label>
+    <InputFile OnChange="@CarregarArquivo" ></InputFile>
+    <InputText @bind-Value="Local"  />
+    <button @onclick="Atualizar">ATUALIZAR</button>
+    <a>@Erro</a>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <td>Local</td>
+                    <td>Dia</td>
+                    <td>Dia da Semana</td>
+                    <td>Descrição</td>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var f in FeriadosLst)
+                {
+                    <tr>
+                        <td>@f.Local</td>
+                        <td>@f.Dia</td>
+                        <td>@f.DiaSemana</td>
+                        <td>@f.Descricao</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+@code {
+    public string Erro { get; set; }
+    public List<Feriado> FeriadosLst { get; set; }  = new(); 
+    public string Local { get; set; } 
+    private int Ano = DateTime.Now.Year;
+    private int UltMes = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        FeriadosLst = await _context.Feriados.AsNoTracking().ToListAsync();
+        if (string.IsNullOrEmpty(Local))
+            Local = "TJGO";
+    }
+
+    private async Task CarregarArquivo(InputFileChangeEventArgs e)
+    {
+        try{
+            FeriadosLst.Clear();
+
+            using (var memoryStream = new MemoryStream())
+        {
+                await e.File.OpenReadStream().CopyToAsync(memoryStream);
+                using (var workbook = new XLWorkbook(memoryStream))
+                {
+
+                    var worksheet = workbook.Worksheet(1);
+                    var range = worksheet.RangeUsed();
+
+                    var r = range.RowCount();
+
+                    for (int row = 2; row <= range.RowCount(); row++)
+                    {
+                        // string dataDesc = worksheet.Cell(row, 1).Value.ToString();
+                        var f = new Feriado(
+                            Local,
+                            RetornaData(worksheet.Cell(row, 1).Value.ToString()),
+                            worksheet.Cell(row, 2).Value.ToString(),
+                            worksheet.Cell(row, 3).Value.ToString(),
+                            worksheet.Cell(row, 4).Value.ToString()
+                            );
+                        FeriadosLst.Add(f);
+                        UltMes = f.Dia.Month;
+                    }
+                }
+            }
+
+
+        }
+        catch(Exception ex)
+        {
+            Erro = ex.Message;
+        }
+
+    }
+
+    private async Task Atualizar()
+    {
+        await _context.Feriados.ExecuteDeleteAsync();
+        await _context.Feriados.AddRangeAsync(FeriadosLst);
+        await _context.SaveChangesAsync();
+    }
+
+    private DateTime RetornaData(string dia)
+    {
+        string formato = "dd 'de' MMMM 'de' yyyy";
+        CultureInfo cultura = new CultureInfo("pt-BR");
+        DateTime data;
+        dia += $" de {Ano}";
+
+        data = DateTime.ParseExact(dia, formato, cultura);
+
+        if (UltMes > data.Month)
+        {
+            Ano++;
+            return data.AddYears(1);
+        }
+        return data;
+    }
+
+    
+}

@@ -4,8 +4,12 @@
         <InputText @bind-Value="Model.Nome" class="form-control" />
         <ValidationMessage For="@(() => Model.Nome)" />
     </div>
-
-    <div class="col-md-4 mb-3">
+    <div class="col-md-2 mb-3">
+        <label class="form-label">Telefone</label>
+        <InputText @bind-Value="Model.Telefone" class="form-control" />
+        <ValidationMessage For="@(() => Model.Telefone)" />
+    </div>
+    <div class="col-md-2 mb-3">
         <label class="form-label">CPF</label>
         <InputText @bind-Value="Model.CPF" class="form-control" />
         <ValidationMessage For="@(() => Model.CPF)" />
